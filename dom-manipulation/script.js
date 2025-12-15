@@ -52,6 +52,7 @@ function saveQuotes() {
  ***********************/
 function populateCategories() {
   const categories = [...new Set(quotes.map(q => q.category))];
+
   categoryFilter.innerHTML = `<option value="all">All Categories</option>`;
 
   categories.forEach(category => {
@@ -116,7 +117,7 @@ function createAddQuoteForm() {
 }
 
 /***********************
- * ADD QUOTE (LOCAL)
+ * ADD QUOTE
  ***********************/
 function addQuote() {
   const text = document.getElementById("newQuoteText").value.trim();
@@ -138,7 +139,6 @@ function addQuote() {
   populateCategories();
   filterQuotes();
 
-  // Simulate sending to server
   sendQuoteToServer(newQuote);
 }
 
@@ -158,7 +158,6 @@ async function fetchQuotesFromServer() {
 
 /***********************
  * SEND QUOTE TO SERVER (POST)
- * REQUIRED BY CHECKER
  ***********************/
 async function sendQuoteToServer(quote) {
   await fetch(SERVER_URL, {
@@ -172,15 +171,15 @@ async function sendQuoteToServer(quote) {
 }
 
 /***********************
- * SYNC WITH SERVER
+ * SYNC QUOTES (REQUIRED NAME)
  ***********************/
-async function syncWithServer() {
+async function syncQuotes() {
   syncStatus.textContent = "Syncing with server...";
 
   try {
     const serverQuotes = await fetchQuotesFromServer();
 
-    // Conflict resolution: server data takes precedence
+    // Conflict resolution: server takes precedence
     const localIds = new Set(quotes.map(q => q.id));
 
     serverQuotes.forEach(serverQuote => {
@@ -193,7 +192,7 @@ async function syncWithServer() {
     populateCategories();
     filterQuotes();
 
-    syncStatus.textContent = "✔ Data synced successfully.";
+    syncStatus.textContent = "✔ Quotes synced successfully.";
     alert("Conflicts resolved. Server data applied.");
 
   } catch (error) {
@@ -205,13 +204,13 @@ async function syncWithServer() {
 /***********************
  * PERIODIC SYNC
  ***********************/
-setInterval(syncWithServer, 30000);
+setInterval(syncQuotes, 30000);
 
 /***********************
  * EVENT LISTENERS
  ***********************/
 newQuoteBtn.addEventListener("click", showRandomQuote);
-syncBtn.addEventListener("click", syncWithServer);
+syncBtn.addEventListener("click", syncQuotes);
 
 /***********************
  * INITIALIZE APP
