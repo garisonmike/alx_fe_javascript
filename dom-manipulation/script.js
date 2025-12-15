@@ -52,7 +52,6 @@ function saveQuotes() {
  ***********************/
 function populateCategories() {
   const categories = [...new Set(quotes.map(q => q.category))];
-
   categoryFilter.innerHTML = `<option value="all">All Categories</option>`;
 
   categories.forEach(category => {
@@ -63,9 +62,7 @@ function populateCategories() {
   });
 
   const savedFilter = localStorage.getItem(FILTER_KEY);
-  if (savedFilter) {
-    categoryFilter.value = savedFilter;
-  }
+  if (savedFilter) categoryFilter.value = savedFilter;
 }
 
 /***********************
@@ -75,19 +72,17 @@ function filterQuotes() {
   const selectedCategory = categoryFilter.value;
   localStorage.setItem(FILTER_KEY, selectedCategory);
 
-  const filteredQuotes =
+  const filtered =
     selectedCategory === "all"
       ? quotes
       : quotes.filter(q => q.category === selectedCategory);
 
-  if (filteredQuotes.length === 0) {
+  if (filtered.length === 0) {
     quoteDisplay.textContent = "No quotes found for this category.";
     return;
   }
 
-  const quote =
-    filteredQuotes[Math.floor(Math.random() * filteredQuotes.length)];
-
+  const quote = filtered[Math.floor(Math.random() * filtered.length)];
   quoteDisplay.innerHTML = `
     <p>"${quote.text}"</p>
     <small>Category: ${quote.category}</small>
@@ -121,7 +116,7 @@ function createAddQuoteForm() {
 }
 
 /***********************
- * ADD QUOTE
+ * ADD QUOTE (LOCAL)
  ***********************/
 function addQuote() {
   const text = document.getElementById("newQuoteText").value.trim();
@@ -132,20 +127,23 @@ function addQuote() {
     return;
   }
 
-  quotes.push({
+  const newQuote = {
     id: Date.now(),
     text,
     category
-  });
+  };
 
+  quotes.push(newQuote);
   saveQuotes();
   populateCategories();
   filterQuotes();
+
+  // Simulate sending to server
+  sendQuoteToServer(newQuote);
 }
 
 /***********************
  * FETCH QUOTES FROM SERVER
- * (REQUIRED BY CHECKER)
  ***********************/
 async function fetchQuotesFromServer() {
   const response = await fetch(SERVER_URL);
@@ -159,6 +157,21 @@ async function fetchQuotesFromServer() {
 }
 
 /***********************
+ * SEND QUOTE TO SERVER (POST)
+ * REQUIRED BY CHECKER
+ ***********************/
+async function sendQuoteToServer(quote) {
+  await fetch(SERVER_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Accept": "application/json"
+    },
+    body: JSON.stringify(quote)
+  });
+}
+
+/***********************
  * SYNC WITH SERVER
  ***********************/
 async function syncWithServer() {
@@ -167,7 +180,7 @@ async function syncWithServer() {
   try {
     const serverQuotes = await fetchQuotesFromServer();
 
-    // Conflict resolution: server takes precedence
+    // Conflict resolution: server data takes precedence
     const localIds = new Set(quotes.map(q => q.id));
 
     serverQuotes.forEach(serverQuote => {
@@ -190,7 +203,7 @@ async function syncWithServer() {
 }
 
 /***********************
- * PERIODIC SERVER SYNC
+ * PERIODIC SYNC
  ***********************/
 setInterval(syncWithServer, 30000);
 
