@@ -2,25 +2,23 @@
 const QUOTES_KEY = "quotesData";
 const FILTER_KEY = "selectedCategory";
 
-// ---------- LOAD QUOTES ----------
-let quotes = JSON.parse(localStorage.getItem(QUOTES_KEY));
+// ---------- MOCK SERVER URL ----------
+const SERVER_URL = "https://jsonplaceholder.typicode.com/posts";
 
-if (!Array.isArray(quotes)) {
-  quotes = [
-    { text: "The best way to get started is to quit talking and begin doing.", category: "Motivation" },
-    { text: "Talk is cheap. Show me the code.", category: "Programming" }
-  ];
-  saveQuotes();
-}
+// ---------- LOAD LOCAL QUOTES ----------
+let quotes = JSON.parse(localStorage.getItem(QUOTES_KEY)) || [
+  { id: 1, text: "The best way to get started is to quit talking and begin doing.", category: "Motivation" },
+  { id: 2, text: "Talk is cheap. Show me the code.", category: "Programming" }
+];
 
 // ---------- DOM ELEMENTS ----------
 const quoteDisplay = document.getElementById("quoteDisplay");
-const newQuoteBtn = document.getElementById("newQuote");
-const exportBtn = document.getElementById("exportQuotes");
-const formContainer = document.getElementById("formContainer");
 const categoryFilter = document.getElementById("categoryFilter");
+const syncStatus = document.getElementById("syncStatus");
+const syncBtn = document.getElementById("syncServer");
+const formContainer = document.getElementById("formContainer");
 
-// ---------- SAVE QUOTES ----------
+// ---------- SAVE LOCAL ----------
 function saveQuotes() {
   localStorage.setItem(QUOTES_KEY, JSON.stringify(quotes));
 }
@@ -28,70 +26,39 @@ function saveQuotes() {
 // ---------- POPULATE CATEGORIES ----------
 function populateCategories() {
   const categories = [...new Set(quotes.map(q => q.category))];
-
   categoryFilter.innerHTML = `<option value="all">All Categories</option>`;
 
-  categories.forEach(category => {
+  categories.forEach(cat => {
     const option = document.createElement("option");
-    option.value = category;
-    option.textContent = category;
+    option.value = cat;
+    option.textContent = cat;
     categoryFilter.appendChild(option);
   });
 
-  // Restore last selected filter
   const savedFilter = localStorage.getItem(FILTER_KEY);
-  if (savedFilter) {
-    categoryFilter.value = savedFilter;
-  }
+  if (savedFilter) categoryFilter.value = savedFilter;
 }
 
 // ---------- FILTER QUOTES ----------
 function filterQuotes() {
-  const selectedCategory = categoryFilter.value;
-  localStorage.setItem(FILTER_KEY, selectedCategory);
+  const selected = categoryFilter.value;
+  localStorage.setItem(FILTER_KEY, selected);
 
-  let filteredQuotes =
-    selectedCategory === "all"
+  const filtered =
+    selected === "all"
       ? quotes
-      : quotes.filter(q => q.category === selectedCategory);
+      : quotes.filter(q => q.category === selected);
 
-  if (filteredQuotes.length === 0) {
-    quoteDisplay.textContent = "No quotes found for this category.";
+  if (filtered.length === 0) {
+    quoteDisplay.textContent = "No quotes found.";
     return;
   }
 
-  const randomIndex = Math.floor(Math.random() * filteredQuotes.length);
-  const quote = filteredQuotes[randomIndex];
-
+  const quote = filtered[Math.floor(Math.random() * filtered.length)];
   quoteDisplay.innerHTML = `
     <p>"${quote.text}"</p>
-    <small>Category: ${quote.category}</small>
+    <small>${quote.category}</small>
   `;
-}
-
-// ---------- SHOW RANDOM QUOTE ----------
-function showRandomQuote() {
-  filterQuotes();
-}
-
-// ---------- CREATE ADD QUOTE FORM ----------
-function createAddQuoteForm() {
-  const formDiv = document.createElement("div");
-
-  const quoteInput = document.createElement("input");
-  quoteInput.id = "newQuoteText";
-  quoteInput.placeholder = "Enter a new quote";
-
-  const categoryInput = document.createElement("input");
-  categoryInput.id = "newQuoteCategory";
-  categoryInput.placeholder = "Enter quote category";
-
-  const addButton = document.createElement("button");
-  addButton.textContent = "Add Quote";
-  addButton.addEventListener("click", addQuote);
-
-  formDiv.append(quoteInput, categoryInput, addButton);
-  formContainer.appendChild(formDiv);
 }
 
 // ---------- ADD QUOTE ----------
@@ -99,54 +66,81 @@ function addQuote() {
   const text = document.getElementById("newQuoteText").value.trim();
   const category = document.getElementById("newQuoteCategory").value.trim();
 
-  if (!text || !category) {
-    alert("Both fields are required.");
-    return;
-  }
+  if (!text || !category) return alert("All fields required");
 
-  quotes.push({ text, category });
+  quotes.push({
+    id: Date.now(),
+    text,
+    category
+  });
+
   saveQuotes();
   populateCategories();
   filterQuotes();
 }
 
-// ---------- EXPORT JSON ----------
-function exportToJson() {
-  const blob = new Blob([JSON.stringify(quotes, null, 2)], {
-    type: "application/json"
-  });
+// ---------- CREATE FORM ----------
+function createAddQuoteForm() {
+  const input1 = document.createElement("input");
+  input1.id = "newQuoteText";
+  input1.placeholder = "Enter quote";
 
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "quotes.json";
-  a.click();
-  URL.revokeObjectURL(url);
+  const input2 = document.createElement("input");
+  input2.id = "newQuoteCategory";
+  input2.placeholder = "Category";
+
+  const btn = document.createElement("button");
+  btn.textContent = "Add Quote";
+  btn.onclick = addQuote;
+
+  formContainer.append(input1, input2, btn);
 }
 
-// ---------- IMPORT JSON ----------
-function importFromJsonFile(event) {
-  const fileReader = new FileReader();
+// ---------- SERVER SYNC ----------
+async function syncWithServer() {
+  syncStatus.textContent = "Syncing with server...";
 
-  fileReader.onload = function (event) {
-    const importedQuotes = JSON.parse(event.target.result);
-    if (Array.isArray(importedQuotes)) {
-      quotes.push(...importedQuotes);
-      saveQuotes();
-      populateCategories();
-      filterQuotes();
-      alert("Quotes imported successfully!");
-    }
-  };
+  try {
+    // Fetch server data (simulated quotes)
+    const response = await fetch(SERVER_URL);
+    const serverData = await response.json();
 
-  fileReader.readAsText(event.target.files[0]);
+    // Convert server posts to quote format
+    const serverQuotes = serverData.slice(0, 5).map(post => ({
+      id: post.id,
+      text: post.title,
+      category: "Server"
+    }));
+
+    // ---------- CONFLICT RESOLUTION ----------
+    // Server data takes precedence
+    const localIds = new Set(quotes.map(q => q.id));
+    serverQuotes.forEach(sq => {
+      if (!localIds.has(sq.id)) {
+        quotes.push(sq);
+      }
+    });
+
+    saveQuotes();
+    populateCategories();
+    filterQuotes();
+
+    syncStatus.textContent = "✔ Data synced. Server updates applied.";
+    alert("Conflicts resolved: Server data took precedence.");
+
+  } catch (error) {
+    syncStatus.textContent = "❌ Sync failed.";
+  }
 }
 
-// ---------- EVENT LISTENERS ----------
-newQuoteBtn.addEventListener("click", showRandomQuote);
-exportBtn.addEventListener("click", exportToJson);
+// ---------- PERIODIC SYNC ----------
+setInterval(syncWithServer, 30000); // every 30 seconds
 
-// ---------- INITIALIZE ----------
+// ---------- EVENT LISTENER ----------
+syncBtn.addEventListener("click", syncWithServer);
+
+// ---------- INIT ----------
 populateCategories();
 createAddQuoteForm();
 filterQuotes();
+saveQuotes();
