@@ -3,6 +3,7 @@
  ***********************/
 const QUOTES_KEY = "quotesData";
 const FILTER_KEY = "selectedCategory";
+const LAST_QUOTE_KEY = "lastViewedQuote";
 
 /***********************
  * MOCK SERVER URL
@@ -39,6 +40,8 @@ const syncStatus = document.getElementById("syncStatus");
 const syncBtn = document.getElementById("syncServer");
 const newQuoteBtn = document.getElementById("newQuote");
 const formContainer = document.getElementById("formContainer");
+const exportBtn = document.getElementById("exportQuotes");
+const importFile = document.getElementById("importFile");
 
 /***********************
  * SAVE TO LOCAL STORAGE
@@ -88,6 +91,9 @@ function filterQuotes() {
     <p>"${quote.text}"</p>
     <small>Category: ${quote.category}</small>
   `;
+
+  // Save last viewed quote to session storage
+  sessionStorage.setItem(LAST_QUOTE_KEY, JSON.stringify(quote));
 }
 
 /***********************
@@ -139,7 +145,44 @@ function addQuote() {
   populateCategories();
   filterQuotes();
 
+  // Clear input fields
+  document.getElementById("newQuoteText").value = "";
+  document.getElementById("newQuoteCategory").value = "";
+
   sendQuoteToServer(newQuote); // send to mock server
+  alert("Quote added successfully!");
+}
+
+/***********************
+ * EXPORT QUOTES TO JSON
+ ***********************/
+function exportToJsonFile() {
+  const dataStr = JSON.stringify(quotes, null, 2);
+  const blob = new Blob([dataStr], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "quotes.json";
+  a.click();
+
+  URL.revokeObjectURL(url);
+}
+
+/***********************
+ * IMPORT QUOTES FROM JSON
+ ***********************/
+function importFromJsonFile(event) {
+  const fileReader = new FileReader();
+  fileReader.onload = function (event) {
+    const importedQuotes = JSON.parse(event.target.result);
+    quotes.push(...importedQuotes);
+    saveQuotes();
+    populateCategories();
+    filterQuotes();
+    alert('Quotes imported successfully!');
+  };
+  fileReader.readAsText(event.target.files[0]);
 }
 
 /***********************
@@ -212,11 +255,32 @@ setInterval(syncQuotes, 30000);
  ***********************/
 newQuoteBtn.addEventListener("click", showRandomQuote);
 syncBtn.addEventListener("click", syncQuotes);
+exportBtn.addEventListener("click", exportToJsonFile);
+importFile.addEventListener("change", importFromJsonFile);
 
 /***********************
  * INITIALIZE APP
  ***********************/
 populateCategories();
 createAddQuoteForm();
-filterQuotes();
+
+// Check if there's a last viewed quote in session storage
+const lastQuote = sessionStorage.getItem(LAST_QUOTE_KEY);
+if (lastQuote) {
+  const quote = JSON.parse(lastQuote);
+  quoteDisplay.innerHTML = `
+    <p>"${quote.text}"</p>
+    <small>Category: ${quote.category}</small>
+  `;
+} else {
+  filterQuotes();
+}
+
 saveQuotes();
+
+// Display notification about periodic sync
+setTimeout(() => {
+  if (syncStatus) {
+    syncStatus.textContent = "App will sync with server every 30 seconds.";
+  }
+}, 1000);

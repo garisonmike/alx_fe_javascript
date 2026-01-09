@@ -1,0 +1,52 @@
+[
+    {
+        "id": 100,
+        "text": "The only way to do great work is to love what you do.",
+        "category": "Inspiration"
+    },
+    {
+        "id": 101,
+        "text": "Innovation distinguishes between a leader and a follower.",
+        "category": "Leadership"
+    },
+    {
+        "id": 102,
+        "text": "Code is like humor. When you have to explain it, it's bad.",
+        "category": "Programming"
+    },
+    {
+        "id": 103,
+        "text": "First, solve the problem. Then, write the code.",
+        "category": "Programming"
+    },
+    {
+        "id": 104,
+        "text": "Experience is the name everyone gives to their mistakes.",
+        "category": "Wisdom"
+    },
+    {
+        "id": 105,
+        "text": "The best time to plant a tree was 20 years ago. The second best time is now.",
+        "category": "Motivation"
+    },
+    {
+        "id": 106,
+        "text": "Simplicity is the soul of efficiency.",
+        "category": "Design"
+    },
+    {
+        "id": 107,
+        "text": "Testing leads to failure, and failure leads to understanding.",
+        "category": "Programming"
+    },
+    {
+        "id": 108,
+        "text": "The function of good software is to make the complex appear to be simple.",
+        "category": "Design"
+    },
+    {
+        "id": 109,
+        "text": "Learning never exhausts the mind.",
+        "category": "Education"
+    }
+]
